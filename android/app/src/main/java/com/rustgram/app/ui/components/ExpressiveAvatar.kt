@@ -8,8 +8,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -26,22 +27,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import com.rustgram.app.ui.theme.AvatarGradients
 import com.rustgram.app.ui.theme.MotionSprings
 import com.rustgram.app.ui.theme.OnlineGreen
+import com.rustgram.app.ui.theme.TelegramAvatarColors
 import java.io.File
 
 /**
- * Interactive Avatar with M3 Expressive tactile spring physics and real photo support:
- * If photoPath is present and exists on disk, renders the real TDLib profile image via Coil.
- * Otherwise, falls back to the gradient monogram.
+ * Authentic Telegram-style avatar: round, solid monogram colors,
+ * real photo from TDLib cache when available.
+ * Springy press reaction (exteraGram tactile feel).
  */
 @Composable
 fun ExpressiveAvatar(
     name: String,
     initials: String,
     tintIndex: Int,
-    isOnline: Boolean,
+    isOnline: Boolean = false,
     photoPath: String? = null,
     size: Dp = 54.dp,
     modifier: Modifier = Modifier,
@@ -56,16 +57,11 @@ fun ExpressiveAvatar(
         label = "avatar_scale"
     )
 
-    val cornerRadius by animateFloatAsState(
-        targetValue = if (isPressed) 18f else (size.value / 2f),
-        animationSpec = MotionSprings.fastSpatial,
-        label = "avatar_corner_morph"
-    )
-
-    val gradient = AvatarGradients.getOrElse(tintIndex % AvatarGradients.size) { AvatarGradients[0] }
+    val color = TelegramAvatarColors[
+        ((if (tintIndex < 0) -tintIndex else tintIndex)) % TelegramAvatarColors.size
+    ]
     val displayText = if (initials.isNotBlank()) initials.take(2).uppercase() else name.take(1).uppercase()
-
-    val hasRealPhoto = photoPath != null && photoPath.isNotBlank() && File(photoPath).exists()
+    val hasRealPhoto = !photoPath.isNullOrBlank() && File(photoPath).exists()
 
     Box(
         modifier = modifier
@@ -85,7 +81,7 @@ fun ExpressiveAvatar(
             val context = LocalContext.current
             val painter = rememberAsyncImagePainter(
                 model = ImageRequest.Builder(context)
-                    .data(File(photoPath!!))
+                    .data(File(photoPath))
                     .crossfade(true)
                     .build()
             )
@@ -95,38 +91,39 @@ fun ExpressiveAvatar(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(cornerRadius.dp))
+                    .clip(CircleShape)
             )
         } else {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(cornerRadius.dp))
-                    .background(gradient),
+                    .clip(CircleShape)
+                    .background(color),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = displayText,
                     color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = (size.value * 0.36f).sp
+                    fontWeight = FontWeight.Medium,
+                    fontSize = (size.value * 0.40f).sp
                 )
             }
         }
 
         if (isOnline) {
+            // Telegram online indicator: white ring + green dot
             Box(
                 modifier = Modifier
-                    .size(size * 0.30f)
+                    .size(size * 0.28f)
                     .align(Alignment.BottomEnd)
-                    .clip(RoundedCornerShape(100))
+                    .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surface)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(size * 0.22f)
-                        .align(Alignment.Center)
-                        .clip(RoundedCornerShape(100))
+                        .fillMaxSize()
+                        .padding(size * 0.06f)
+                        .clip(CircleShape)
                         .background(OnlineGreen)
                 )
             }

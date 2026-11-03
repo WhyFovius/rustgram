@@ -14,15 +14,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rustgram.app.NativeBridge
 import com.rustgram.app.ui.components.ExpressiveAvatar
-import com.rustgram.app.ui.components.expressiveBouncyClick
+import com.rustgram.app.ui.theme.TelegramBlue
 
+/**
+ * Authentic Telegram profile screen (exteraGram layout):
+ * plain surface, hero avatar, bold name, quick action circle buttons,
+ * grouped info sections, divider rows.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
@@ -35,28 +41,28 @@ fun ProfileScreen(
     }
 
     var isNotificationsEnabled by remember { mutableStateOf(true) }
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                navigationIcon = {
+            Surface(color = MaterialTheme.colorScheme.background) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                     }
-                },
-                title = { Text("Информация", fontWeight = FontWeight.Bold) },
-                actions = {
+                    Spacer(Modifier.weight(1f))
                     IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.Share, contentDescription = "Поделиться")
+                        Icon(Icons.Outlined.Edit, contentDescription = "Изменить")
                     }
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.MoreVert, contentDescription = "Ещё")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
-            )
+                }
+            }
         }
     ) { innerPadding ->
         Column(
@@ -66,19 +72,19 @@ fun ProfileScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Large Hero Avatar
+            // Hero avatar
             ExpressiveAvatar(
                 name = chat.name,
                 initials = chat.initials,
                 tintIndex = chat.tint,
                 isOnline = chat.online,
                 photoPath = chat.photoPath,
-                size = 110.dp
+                size = 120.dp
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
             Text(
                 text = chat.name,
@@ -86,170 +92,156 @@ fun ProfileScreen(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = if (chat.online) "в сети" else "был(а) недавно",
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (chat.online) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                fontSize = 14.sp,
+                color = if (chat.online) TelegramBlue else MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Quick Action Buttons (Call, Mute, Search, More)
+            // Telegram quick action buttons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                ProfileActionButton(icon = Icons.Outlined.Call, label = "Звонок") {}
-                ProfileActionButton(icon = Icons.Outlined.Videocam, label = "Видео") {}
-                ProfileActionButton(
+                TgProfileAction(icon = Icons.Outlined.ChatBubbleOutline, label = "Сообщение") { onBack() }
+                TgProfileAction(icon = Icons.Outlined.Call, label = "Звонок") {}
+                TgProfileAction(icon = Icons.Outlined.Videocam, label = "Видео") {}
+                TgProfileAction(
                     icon = if (isNotificationsEnabled) Icons.Outlined.Notifications else Icons.Outlined.NotificationsOff,
                     label = if (isNotificationsEnabled) "Звук" else "Без звука"
-                ) {
-                    isNotificationsEnabled = !isNotificationsEnabled
-                }
-                ProfileActionButton(icon = Icons.Outlined.Search, label = "Поиск") {}
+                ) { isNotificationsEnabled = !isNotificationsEnabled }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
 
-            // Detailed Info Cards
-            Column(
+            // Info section
+            Text(
+                "Информация",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = TelegramBlue,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    shape = MaterialTheme.shapes.large,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "О пользователе",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+            )
 
-                        ProfileInfoRow(
-                            title = "+7 (900) 123-45-67",
-                            subtitle = "Телефон"
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 10.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
-                        ProfileInfoRow(
-                            title = "@${chat.name.filter { it.isLetterOrDigit() }.lowercase()}",
-                            subtitle = "Имя пользователя"
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 10.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                        )
-                        ProfileInfoRow(
-                            title = "Hey there! I am using Rustgram on official TDLib 🦀⚡",
-                            subtitle = "О себе"
-                        )
-                    }
-                }
-
-                // Shared Media Tabs
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    ),
-                    shape = MaterialTheme.shapes.large,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column {
-                        ListItem(
-                            leadingContent = { Icon(Icons.Outlined.Image, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                            headlineContent = { Text("Медиа", fontWeight = FontWeight.SemiBold) },
-                            trailingContent = { Text("24", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                        )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        ListItem(
-                            leadingContent = { Icon(Icons.Outlined.InsertDriveFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                            headlineContent = { Text("Файлы", fontWeight = FontWeight.SemiBold) },
-                            trailingContent = { Text("8", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                        )
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        ListItem(
-                            leadingContent = { Icon(Icons.Outlined.Link, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                            headlineContent = { Text("Ссылки", fontWeight = FontWeight.SemiBold) },
-                            trailingContent = { Text("15", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                        )
-                    }
-                }
+            TgInfoCard {
+                TgInfoRow(
+                    icon = Icons.Outlined.Call,
+                    title = "+7 900 123-45-67",
+                    subtitle = "Мобильный"
+                )
+                Divider()
+                TgInfoRow(
+                    icon = Icons.Outlined.AlternateEmail,
+                    title = "@${chat.name.filter { it.isLetterOrDigit() }.lowercase().take(16)}",
+                    subtitle = "Имя пользователя"
+                )
+                Divider()
+                TgInfoRow(
+                    icon = Icons.Outlined.Info,
+                    title = "Использую Rustgram на TDLib 🦀",
+                    subtitle = "О себе"
+                )
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // Shared media
+            Text(
+                "Медиа",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = TelegramBlue,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp)
+            )
+
+            TgInfoCard {
+                TgInfoRow(icon = Icons.Outlined.Image, title = "Медиа и файлы", trailing = "24")
+                Divider()
+                TgInfoRow(icon = Icons.Outlined.FavoriteBorder, title = "Реакции", trailing = "6")
+                Divider()
+                TgInfoRow(icon = Icons.Outlined.Link, title = "Ссылки", trailing = "15")
+            }
+
+            Spacer(Modifier.height(32.dp))
         }
     }
 }
 
 @Composable
-private fun ProfileActionButton(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
+private fun TgProfileAction(icon: ImageVector, label: String, onClick: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .expressiveBouncyClick(pressedScale = 0.90f) { onClick() }
+        modifier = Modifier.clickable(onClick = onClick)
     ) {
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(50.dp)
+            color = TelegramBlue.copy(alpha = 0.12f),
+            modifier = Modifier.size(52.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    icon,
-                    contentDescription = label,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(24.dp)
-                )
+                Icon(icon, contentDescription = label, tint = TelegramBlue, modifier = Modifier.size(24.dp))
             }
         }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
+        Spacer(Modifier.height(6.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, fontSize = 12.sp)
     }
 }
 
 @Composable
-private fun ProfileInfoRow(
-    title: String,
-    subtitle: String
-) {
-    Column {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+private fun TgInfoCard(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = RoundedCornerShape(14.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+    ) {
+        Column(content = content)
     }
+}
+
+@Composable
+private fun TgInfoRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String? = null,
+    trailing: String? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {}
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp)
+            if (subtitle != null) {
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+            }
+        }
+        if (trailing != null) {
+            Text(trailing, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
+        }
+    }
+}
+
+@Composable
+private fun Divider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 54.dp),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
 }
