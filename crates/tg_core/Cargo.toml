@@ -1,0 +1,14 @@
+[package]
+name = "tg_core"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = "0.4"
+tdlib-rs = { version = "1.4.0", features = ["download-tdlib"] }
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "sync", "time"] }

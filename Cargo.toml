@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/tg_core",
+    "crates/ui_theme_m3",
+    "apps/telegram_mobile",
+]
+default-members = ["apps/telegram_mobile"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

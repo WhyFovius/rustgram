@@ -1,0 +1,11 @@
+[target.aarch64-linux-android]
+ar = "C:/Users/Admin/AppData/Local/Android/Sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"
+linker = "C:/Users/Admin/AppData/Local/Android/Sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android34-clang.cmd"
+rustflags = ["-C", "link-arg=-Wl,-z,max-page-size=16384"]
+
+[env]
+ANDROID_NDK_ROOT = "C:/Users/Admin/AppData/Local/Android/Sdk/ndk/27.2.12479018"
+ANDROID_NDK_HOME = "C:/Users/Admin/AppData/Local/Android/Sdk/ndk/27.2.12479018"
+CC_aarch64_linux_android = "C:/Users/Admin/AppData/Local/Android/Sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android34-clang.cmd"
+CXX_aarch64_linux_android = "C:/Users/Admin/AppData/Local/Android/Sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android34-clang++.cmd"
+AR_aarch64_linux_android = "C:/Users/Admin/AppData/Local/Android/Sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/bin/llvm-ar.exe"

@@ -1,0 +1,25 @@
+# Rust
+/target
+Cargo.lock
+
+# Gradle / Android
+.gradle/
+.gradle_home/
+build/
+*/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+*.iml
+.idea/
+.DS_Store
+
+# Temporary & Release files
+*.apk
+tdlib-db/
+tdlib-files/
+*.log
+*.png
+.opencode/
+exp/
+skill/
