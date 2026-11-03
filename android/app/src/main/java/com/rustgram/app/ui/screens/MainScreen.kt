@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -62,14 +63,15 @@ fun MainScreen(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var activeChat by remember { mutableStateOf<ChatItem?>(null) }
+    var viewingProfileChat by remember { mutableStateOf<ChatItem?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearchActive by remember { mutableStateOf(false) }
 
-    // Dialogs loaded exclusively from real TDLib / MTProto backend
+    // Dialogs loaded directly from real TDLib / MTProto backend
     var chats by remember { mutableStateOf<List<ChatItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Category filter: 0 = All, 1 = Personal, 2 = Groups
+    // Folder Category filter: 0 = All, 1 = Personal, 2 = Groups, 3 = Channels, 4 = Bots
     var selectedCategoryFilter by remember { mutableIntStateOf(0) }
 
     // Trigger load of real chats upon entering screen
@@ -115,6 +117,8 @@ fun MainScreen(
             val matchesCategory = when (selectedCategoryFilter) {
                 1 -> chat.category.equals("Personal", ignoreCase = true)
                 2 -> chat.category.equals("Group", ignoreCase = true)
+                3 -> chat.category.equals("Channel", ignoreCase = true)
+                4 -> chat.category.equals("Bot", ignoreCase = true)
                 else -> true
             }
             val matchesQuery = searchQuery.isBlank() ||
@@ -124,12 +128,20 @@ fun MainScreen(
         }
     }
 
+    // Navigation overrides
+    if (viewingProfileChat != null) {
+        ProfileScreen(
+            chat = viewingProfileChat!!,
+            onBack = { viewingProfileChat = null }
+        )
+        return
+    }
+
     if (activeChat != null) {
         ChatDetailScreen(
             chat = activeChat!!,
-            onBack = {
-                activeChat = null
-            }
+            onBack = { activeChat = null },
+            onOpenProfile = { viewingProfileChat = activeChat }
         )
         return
     }
@@ -143,14 +155,15 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            // Floating style Top App Bar
+            // Floating style Top App Bar with elevation & glass effect
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
-                tonalElevation = 4.dp
+                tonalElevation = 6.dp,
+                shadowElevation = 4.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -175,7 +188,7 @@ fun MainScreen(
                     } else {
                         Text(
                             text = when (selectedTab) {
-                                0 -> "Чаты"
+                                0 -> "Rustgram"
                                 1 -> "Звонки"
                                 2 -> "Контакты"
                                 else -> "Настройки"
@@ -224,10 +237,11 @@ fun MainScreen(
             when (selectedTab) {
                 0 -> {
                     Column(modifier = Modifier.fillMaxSize()) {
+                        // exteraGram / Telegram Folder Filter Chips
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             FilterChip(
@@ -245,7 +259,13 @@ fun MainScreen(
                             FilterChip(
                                 selected = selectedCategoryFilter == 2,
                                 onClick = { selectedCategoryFilter = 2 },
-                                label = { Text("Группы и каналы") },
+                                label = { Text("Группы") },
+                                shape = MaterialTheme.shapes.small
+                            )
+                            FilterChip(
+                                selected = selectedCategoryFilter == 3,
+                                onClick = { selectedCategoryFilter = 3 },
+                                label = { Text("Каналы") },
                                 shape = MaterialTheme.shapes.small
                             )
                         }
@@ -274,7 +294,7 @@ fun MainScreen(
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(vertical = 6.dp)
+                                contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp)
                             ) {
                                 items(filteredChats, key = { it.id }) { chat ->
                                     ChatRowItem(
@@ -292,12 +312,12 @@ fun MainScreen(
                 1 -> EmptyStateTab(
                     icon = Icons.Outlined.Call,
                     title = "Журнал звонков пуст",
-                    subtitle = "Звонки Telegram через MTProto шифрование будут отображаться здесь"
+                    subtitle = "Звонки Telegram через сквозное MTProto шифрование"
                 )
                 2 -> EmptyStateTab(
                     icon = Icons.Outlined.PeopleOutline,
                     title = "Контакты Telegram",
-                    subtitle = "Контакты загружаются синхронно с серверов Telegram"
+                    subtitle = "Синхронизируются автоматически с серверами Telegram"
                 )
                 3 -> SettingsTab(
                     onLogout = onLogout,
@@ -326,7 +346,7 @@ fun ChatRowItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 16.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             ExpressiveAvatar(
@@ -339,7 +359,6 @@ fun ChatRowItem(
             )
 
             Spacer(modifier = Modifier.width(14.dp))
-
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -364,7 +383,7 @@ fun ChatRowItem(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -444,11 +463,14 @@ fun EmptyStateTab(
 @Composable
 fun ChatDetailScreen(
     chat: ChatItem,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenProfile: () -> Unit
 ) {
     var messages by remember { mutableStateOf<List<MessageItem>>(emptyList()) }
     var inputText by remember { mutableStateOf("") }
+    var isEmojiOpen by remember { mutableStateOf(false) }
     var isRecordingVoice by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
 
     LaunchedEffect(chat.id) {
         NativeBridge.loadHistory(chat.id)
@@ -487,7 +509,8 @@ fun ChatDetailScreen(
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
-                tonalElevation = 4.dp
+                tonalElevation = 6.dp,
+                shadowElevation = 4.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -504,10 +527,15 @@ fun ChatDetailScreen(
                         tintIndex = chat.tint,
                         isOnline = chat.online,
                         photoPath = chat.photoPath,
-                        size = 40.dp
+                        size = 42.dp,
+                        onClick = onOpenProfile
                     )
                     Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { onOpenProfile() }
+                    ) {
                         Text(
                             chat.name,
                             style = MaterialTheme.typography.titleMedium,
@@ -524,82 +552,101 @@ fun ChatDetailScreen(
                     IconButton(onClick = {}) {
                         Icon(Icons.Outlined.Call, contentDescription = "Звонок")
                     }
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.MoreVert, contentDescription = "Опции")
+                    IconButton(onClick = onOpenProfile) {
+                        Icon(Icons.Outlined.MoreVert, contentDescription = "Профиль")
                     }
                 }
             }
         },
         bottomBar = {
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
-                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .imePadding()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            Column(modifier = Modifier.fillMaxWidth().imePadding()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.98f),
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    tonalElevation = 4.dp,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.AttachFile, contentDescription = "Прикрепить")
-                    }
-
-                    TextField(
-                        value = inputText,
-                        onValueChange = { inputText = it },
-                        placeholder = { Text("Сообщение...") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = false,
-                        maxLines = 4,
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        ),
-                        shape = MaterialTheme.shapes.large
-                    )
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    if (inputText.isNotBlank()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         IconButton(
-                            onClick = {
-                                NativeBridge.sendMessage(chat.id, inputText)
-                                inputText = ""
-                            },
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = MaterialTheme.colorScheme.onPrimary
-                            ),
-                            modifier = Modifier.expressiveBouncyClick(pressedScale = 0.88f) {
-                                NativeBridge.sendMessage(chat.id, inputText)
-                                inputText = ""
-                            }
+                            onClick = { isEmojiOpen = !isEmojiOpen }
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить")
+                            Icon(
+                                if (isEmojiOpen) Icons.Outlined.Keyboard else Icons.Outlined.EmojiEmotions,
+                                contentDescription = "Эмодзи и стикеры",
+                                tint = if (isEmojiOpen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                    } else {
-                        IconButton(
-                            onClick = {
-                                isRecordingVoice = !isRecordingVoice
-                            },
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = if (isRecordingVoice) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primaryContainer,
-                                contentColor = if (isRecordingVoice) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimaryContainer
+
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Outlined.AttachFile, contentDescription = "Прикрепить файл")
+                        }
+
+                        TextField(
+                            value = inputText,
+                            onValueChange = { inputText = it },
+                            placeholder = { Text("Сообщение...") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = false,
+                            maxLines = 4,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                focusedIndicatorColor = Color.Transparent,
+                                unfocusedIndicatorColor = Color.Transparent
                             ),
-                            modifier = Modifier.expressiveBouncyClick(pressedScale = 0.88f) {
-                                isRecordingVoice = !isRecordingVoice
+                            shape = MaterialTheme.shapes.large
+                        )
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        if (inputText.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    NativeBridge.sendMessage(chat.id, inputText)
+                                    inputText = ""
+                                },
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                ),
+                                modifier = Modifier.expressiveBouncyClick(pressedScale = 0.88f) {
+                                    NativeBridge.sendMessage(chat.id, inputText)
+                                    inputText = ""
+                                }
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить")
                             }
-                        ) {
-                            Icon(Icons.Outlined.Mic, contentDescription = "Голосовое сообщение")
+                        } else {
+                            IconButton(
+                                onClick = {
+                                    isRecordingVoice = !isRecordingVoice
+                                },
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = if (isRecordingVoice) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = if (isRecordingVoice) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onPrimaryContainer
+                                ),
+                                modifier = Modifier.expressiveBouncyClick(pressedScale = 0.88f) {
+                                    isRecordingVoice = !isRecordingVoice
+                                }
+                            ) {
+                                Icon(Icons.Outlined.Mic, contentDescription = "Голосовое сообщение")
+                            }
                         }
                     }
                 }
+
+                // exteraGram / Telegram Native Emoji Keyboard Panel
+                EmojiKeyboardPanel(
+                    visible = isEmojiOpen,
+                    onEmojiSelected = { emoji ->
+                        inputText += emoji
+                    }
+                )
             }
         }
     ) { innerPadding ->
@@ -622,12 +669,13 @@ fun ChatDetailScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 14.dp),
                 contentPadding = PaddingValues(vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(messages) { msg ->
                     val isOut = msg.outgoing
@@ -635,30 +683,29 @@ fun ChatDetailScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = if (isOut) Arrangement.End else Arrangement.Start
                     ) {
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isOut) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainerHigh
-                                }
-                            ),
+                        Surface(
                             shape = RoundedCornerShape(
-                                topStart = 16.dp,
-                                topEnd = 16.dp,
-                                bottomStart = if (isOut) 16.dp else 4.dp,
-                                bottomEnd = if (isOut) 4.dp else 16.dp
+                                topStart = 18.dp,
+                                topEnd = 18.dp,
+                                bottomStart = if (isOut) 18.dp else 4.dp,
+                                bottomEnd = if (isOut) 4.dp else 18.dp
                             ),
+                            color = if (isOut) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceContainerHigh
+                            },
+                            tonalElevation = 2.dp,
                             modifier = Modifier
-                                .widthIn(max = 280.dp)
+                                .widthIn(max = 290.dp)
                                 .animateContentSize(animationSpec = MotionSprings.fastSizeSpatial)
                         ) {
                             Column(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
                             ) {
                                 Text(
                                     text = msg.body,
-                                    style = MaterialTheme.typography.bodyLarge,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = if (isOut) {
                                         MaterialTheme.colorScheme.onPrimaryContainer
                                     } else {
@@ -673,7 +720,7 @@ fun ChatDetailScreen(
                                     Text(
                                         text = msg.time,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.outline
+                                        color = if (isOut) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.outline
                                     )
                                     if (isOut) {
                                         Spacer(modifier = Modifier.width(4.dp))
@@ -681,7 +728,7 @@ fun ChatDetailScreen(
                                             text = if (msg.read) "✓✓" else "✓",
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (msg.read) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }

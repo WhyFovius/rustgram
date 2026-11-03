@@ -87,8 +87,13 @@ pub fn map_chat(chat: &tdlib_rs::types::Chat) -> Dialog {
 
     let (category, online) = match &chat.r#type {
         tdlib_rs::enums::ChatType::Private(_) => (DialogCategory::Personal, false),
-        tdlib_rs::enums::ChatType::BasicGroup(_) | tdlib_rs::enums::ChatType::Supergroup(_) => {
-            (DialogCategory::Group, false)
+        tdlib_rs::enums::ChatType::BasicGroup(_) => (DialogCategory::Group, false),
+        tdlib_rs::enums::ChatType::Supergroup(sg) => {
+            if sg.is_channel {
+                (DialogCategory::Channel, false)
+            } else {
+                (DialogCategory::Group, false)
+            }
         }
         tdlib_rs::enums::ChatType::Secret(_) => (DialogCategory::Personal, false),
     };

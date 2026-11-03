@@ -14,4 +14,6 @@ object NativeBridge {
     external fun markAsRead(dialogId: Long)
     external fun loadHistory(dialogId: Long)
     external fun loadChats(limit: Int)
+    external fun getUser(userId: Long)
+    external fun getChat(chatId: Long)
 }

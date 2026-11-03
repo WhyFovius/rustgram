@@ -66,9 +66,13 @@ impl LocalStore {
     pub fn filtered_dialogs(&self, query: &str, category: i32) -> Vec<Dialog> {
         let query = query.trim().to_lowercase();
         self.dialogs.iter().filter(|dialog| {
-            let category_matches = category == 0
-                || (category == 1 && dialog.category == DialogCategory::Personal)
-                || (category == 2 && dialog.category == DialogCategory::Group);
+            let category_matches = match category {
+                1 => dialog.category == DialogCategory::Personal,
+                2 => dialog.category == DialogCategory::Group,
+                3 => dialog.category == DialogCategory::Channel,
+                4 => dialog.category == DialogCategory::Bot,
+                _ => true,
+            };
             let query_matches = query.is_empty()
                 || dialog.name.to_lowercase().contains(&query)
                 || dialog.preview.to_lowercase().contains(&query);
@@ -122,6 +126,14 @@ impl LocalStore {
                     }
                 }
                 self.append_message(*dialog_id, message.clone());
+            }
+            FileDownloaded { file_id: _, path } => {
+                // Update photo_path for any dialog that has this photo
+                for dialog in self.dialogs.iter_mut() {
+                    if dialog.photo_path.as_ref().map_or(true, |p| p.is_empty()) {
+                        dialog.photo_path = Some(path.clone());
+                    }
+                }
             }
             _ => {}
         }

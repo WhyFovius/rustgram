@@ -31,6 +31,8 @@ enum TdlibCommand {
     LoadChats { limit: i32 },
     LoadChatHistory { chat_id: i64, from_msg_id: i64, limit: i32 },
     MarkChatRead { chat_id: i64 },
+    GetChat { chat_id: i64 },
+    GetUser { user_id: i64 },
     Stop,
 }
 
@@ -195,6 +197,14 @@ impl Transport for TdlibTransport {
                                         let _ = event_tx_clone.send(CoreEvent::DialogUpserted(dialog));
                                         let _ = event_tx_clone.send(CoreEvent::DialogsChanged);
                                     }
+                                    tdlib_rs::enums::Update::File(f) => {
+                                        if f.file.local.is_downloading_completed && !f.file.local.path.is_empty() {
+                                            let _ = event_tx_clone.send(CoreEvent::FileDownloaded {
+                                                file_id: f.file.id,
+                                                path: f.file.local.path.clone(),
+                                            });
+                                        }
+                                    }
                                     _ => {
                                         let my_uid = *my_user_id_clone.lock().unwrap();
                                         if let Some(event) = map_update(&update, my_uid) {
@@ -324,6 +334,24 @@ impl Transport for TdlibTransport {
                                 }
                             }
                         }
+                        TdlibCommand::GetChat { chat_id } => {
+                            if let Ok(tdlib_rs::enums::Chat::Chat(chat)) = tdlib_rs::functions::get_chat(chat_id, client_id).await {
+                                let dialog = map_chat(&chat);
+                                let _ = event_tx.send(CoreEvent::DialogUpserted(dialog));
+                            }
+                        }
+                        TdlibCommand::GetUser { user_id } => {
+                            if let Ok(tdlib_rs::enums::User::User(user)) = tdlib_rs::functions::get_user(user_id, client_id).await {
+                                if let Some(p) = &user.profile_photo {
+                                    if !p.small.local.is_downloading_completed && p.small.id != 0 {
+                                        let fid = p.small.id;
+                                        tokio::spawn(async move {
+                                            let _ = tdlib_rs::functions::download_file(fid, 1, 0, 0, false, client_id).await;
+                                        });
+                                    }
+                                }
+                            }
+                        }
                         TdlibCommand::Stop => {
                             receive_task.abort();
                             break;
@@ -436,6 +464,20 @@ impl Transport for TdlibTransport {
         tx.send(TdlibCommand::MarkChatRead {
             chat_id: dialog_id,
         }).map_err(|_| TransportError::NotConnected)
+    }
+
+    fn get_chat(&mut self, chat_id: i64) -> Result<(), TransportError> {
+        let Some(tx) = &self.cmd_tx else {
+            return Err(TransportError::NotConnected);
+        };
+        tx.send(TdlibCommand::GetChat { chat_id }).map_err(|_| TransportError::NotConnected)
+    }
+
+    fn get_user(&mut self, user_id: i64) -> Result<(), TransportError> {
+        let Some(tx) = &self.cmd_tx else {
+            return Err(TransportError::NotConnected);
+        };
+        tx.send(TdlibCommand::GetUser { user_id }).map_err(|_| TransportError::NotConnected)
     }
 }
 

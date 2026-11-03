@@ -160,4 +160,22 @@ mod android_bridge {
             let _ = session.client.load_chats(limit);
         }
     }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_rustgram_app_NativeBridge_getUser(
+        _env: JNIEnv<'_>, _: JClass<'_>, user_id: jni::sys::jlong,
+    ) {
+        if let Some(session) = transport_lock().as_mut() {
+            let _ = session.client.get_user(user_id);
+        }
+    }
+
+    #[no_mangle]
+    pub extern "system" fn Java_com_rustgram_app_NativeBridge_getChat(
+        _env: JNIEnv<'_>, _: JClass<'_>, chat_id: jni::sys::jlong,
+    ) {
+        if let Some(session) = transport_lock().as_mut() {
+            let _ = session.client.get_chat(chat_id);
+        }
+    }
 }

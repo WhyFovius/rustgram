@@ -38,6 +38,8 @@ pub enum CoreEvent {
     AuthStateChanged { state: String },
     /// Connection state updated (Connecting, Ready, WaitingForNetwork, etc.)
     ConnectionStateChanged { state: String },
+    /// A file download completed with local storage path.
+    FileDownloaded { file_id: i32, path: String },
 }
 
 /// Receives events drained by [`Transport::poll`]. The UI implements this to
@@ -133,6 +135,18 @@ pub trait Transport: Send {
     fn mark_dialog_read(&mut self, dialog_id: i64) -> Result<(), TransportError> {
         let _ = dialog_id;
         Err(TransportError::Unsupported("mark_dialog_read not supported by this transport"))
+    }
+
+    /// Fetches full chat details.
+    fn get_chat(&mut self, chat_id: i64) -> Result<(), TransportError> {
+        let _ = chat_id;
+        Err(TransportError::Unsupported("get_chat not supported by this transport"))
+    }
+
+    /// Fetches user profile.
+    fn get_user(&mut self, user_id: i64) -> Result<(), TransportError> {
+        let _ = user_id;
+        Err(TransportError::Unsupported("get_user not supported by this transport"))
     }
 }
 

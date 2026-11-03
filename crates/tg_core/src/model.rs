@@ -20,6 +20,8 @@ pub struct Dialog {
 pub enum DialogCategory {
     Personal,
     Group,
+    Channel,
+    Bot,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -28,4 +30,19 @@ pub struct Message {
     pub time: String,
     pub outgoing: bool,
     pub read: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UserProfile {
+    pub id: i64,
+    pub first_name: String,
+    pub last_name: String,
+    pub username: Option<String>,
+    pub phone_number: Option<String>,
+    pub bio: Option<String>,
+    pub photo_path: Option<String>,
+    pub is_contact: bool,
+    pub is_verified: bool,
+    pub is_premium: bool,
+    pub status: String,
 }
